@@ -3,36 +3,40 @@ const engine = new BABYLON.Engine(canvas, true);
 
 let camera;
 
+// ===== ジャンプ用 =====
+let velocityY = 0;
+let isGrounded = false;
+
 const createScene = () => {
   const scene = new BABYLON.Scene(engine);
 
   // ===== 空（明るく）=====
   scene.clearColor = new BABYLON.Color3(0.6, 0.8, 1);
 
-  // ===== カメラ（FPS）=====
+  // ===== カメラ =====
   camera = new BABYLON.UniversalCamera("camera",
     new BABYLON.Vector3(0, 2, -10), scene);
 
   camera.attachControl(canvas, true);
 
-  // WASD操作に変更
-  camera.keysUp = [87];    // W
-  camera.keysDown = [83];  // S
-  camera.keysLeft = [65];  // A
-  camera.keysRight = [68]; // D
+  // WASD
+  camera.keysUp = [87];
+  camera.keysDown = [83];
+  camera.keysLeft = [65];
+  camera.keysRight = [68];
 
   camera.speed = 0.4;
   camera.angularSensibility = 4000;
 
-  // 重力＆衝突
+  // 衝突
   scene.gravity = new BABYLON.Vector3(0, -0.5, 0);
   scene.collisionsEnabled = true;
 
-  camera.applyGravity = true;
+  camera.applyGravity = false; // ← 自作ジャンプ使うためOFF
   camera.checkCollisions = true;
   camera.ellipsoid = new BABYLON.Vector3(1, 1, 1);
 
-  // ===== ライト（明るく）=====
+  // ===== ライト =====
   const light = new BABYLON.HemisphericLight(
     "light",
     new BABYLON.Vector3(0, 1, 0),
@@ -51,19 +55,22 @@ const createScene = () => {
   BABYLON.SceneLoader.ImportMesh("", "models/", "gun.glb", scene, (meshes) => {
     const gun = meshes[0];
 
-    // カメラに固定
     gun.parent = camera;
 
-    // 位置調整（FPSっぽく）
-    gun.position = new BABYLON.Vector3(0.5, -0.6, 1.2);
+    // 位置（少し上）
+    gun.position = new BABYLON.Vector3(0.5, -0.3, 1.2);
 
-    // サイズ調整
+    // サイズ
     gun.scaling = new BABYLON.Vector3(0.3, 0.3, 0.3);
 
-    // 向き調整
-    gun.rotation = new BABYLON.Vector3(0, Math.PI, 0);
+    // 向き修正（横→正面）
+    gun.rotation = new BABYLON.Vector3(
+      Math.PI / 2,
+      Math.PI,
+      0
+    );
 
-    // 透明バグ修正
+    // 透明バグ対策
     gun.getChildMeshes().forEach(mesh => {
       if (mesh.material) {
         mesh.material.alpha = 1;
@@ -77,6 +84,28 @@ const createScene = () => {
   const enemy = BABYLON.MeshBuilder.CreateBox("enemy", {}, scene);
   enemy.position = new BABYLON.Vector3(0, 1, 10);
   enemy.checkCollisions = true;
+
+  // ===== ジャンプ処理 =====
+  scene.onBeforeRenderObservable.add(() => {
+
+    if (camera.position.y <= 2) {
+      isGrounded = true;
+      velocityY = 0;
+      camera.position.y = 2;
+    } else {
+      isGrounded = false;
+      velocityY -= 0.02;
+    }
+
+    camera.position.y += velocityY;
+  });
+
+  // ===== スペースでジャンプ =====
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Space" && isGrounded) {
+      velocityY = 0.35;
+    }
+  });
 
   // ===== 射撃 =====
   window.addEventListener("click", () => {
