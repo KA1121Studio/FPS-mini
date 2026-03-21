@@ -48,31 +48,34 @@ const createScene = () => {
   });
 
   // ===== 銃 =====
-  BABYLON.SceneLoader.ImportMesh("", "models/", "gun.glb", scene, (meshes) => {
-    const gun = meshes[0];
+ BABYLON.SceneLoader.ImportMesh("", "models/", "gun.glb", scene, (meshes) => {
+  const gun = meshes[0];
 
-    // カメラに固定
-    gun.parent = camera;
+  gun.parent = camera;
 
-    // 位置調整（FPSっぽく）
-    gun.position = new BABYLON.Vector3(0.5, -0.6, 1.2);
+  // 位置（少し上＋ちょい前）
+  gun.position = new BABYLON.Vector3(0.6, -0.4, 1.5);
 
-    // サイズ調整
-    gun.scaling = new BABYLON.Vector3(0.3, 0.3, 0.3);
+  // サイズ
+  gun.scaling = new BABYLON.Vector3(0.25, 0.25, 0.25);
 
-    // 向き調整
-    gun.rotation = new BABYLON.Vector3(0, Math.PI, 0);
+  // ⭐ 超重要：回転（これが本体）
+  gun.rotation = new BABYLON.Vector3(
+    Math.PI / 2,   // 横→縦に起こす
+    Math.PI / 2,   // 左向き→前向き
+    0
+  );
 
-    // 透明バグ修正
-    gun.getChildMeshes().forEach(mesh => {
-      if (mesh.material) {
-        mesh.material.alpha = 1;
-        mesh.material.backFaceCulling = true;
-        mesh.material.needDepthPrePass = true;
-      }
-    });
+  // 透明バグ修正
+  gun.getChildMeshes().forEach(mesh => {
+    if (mesh.material) {
+      mesh.material.alpha = 1;
+      mesh.material.backFaceCulling = true;
+      mesh.material.needDepthPrePass = true;
+    }
   });
-
+});
+  
   // ===== 敵 =====
   const enemy = BABYLON.MeshBuilder.CreateBox("enemy", {}, scene);
   enemy.position = new BABYLON.Vector3(0, 1, 10);
