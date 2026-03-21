@@ -59,12 +59,12 @@ const createScene = () => {
   // サイズ
   gun.scaling = new BABYLON.Vector3(0.25, 0.25, 0.25);
 
-  // ⭐ 超重要：回転（これが本体）
+  // 回転（これが本体）
   gun.rotation = new BABYLON.Vector3(
-    Math.PI / 2,   // 横→縦に起こす
-    Math.PI / 2,   // 左向き→前向き
-    0
-  );
+  Math.PI / 2,   // 横→縦
+  -Math.PI / 2,  // 左ズレ修正＋前向きにする
+  0
+);
 
   // 透明バグ修正
   gun.getChildMeshes().forEach(mesh => {
