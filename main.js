@@ -61,11 +61,10 @@ const createScene = () => {
 
   // 回転（これが本体）
 gun.rotation = new BABYLON.Vector3(
-  Math.PI / 2,
-  0,
+  Math.PI / 2,   // 横→縦
+  -Math.PI / 2,  // 左ズレ修正＋前向きにする
   0
 );
-
   // 透明バグ修正
   gun.getChildMeshes().forEach(mesh => {
     if (mesh.material) {
