@@ -60,9 +60,9 @@ const createScene = () => {
   gun.scaling = new BABYLON.Vector3(0.25, 0.25, 0.25);
 
   // 回転（これが本体）
-  gun.rotation = new BABYLON.Vector3(
-  Math.PI / 2,   // 横→縦
-  -Math.PI / 2,  // 左ズレ修正＋前向きにする
+gun.rotation = new BABYLON.Vector3(
+  Math.PI / 2,
+  0,
   0
 );
 
