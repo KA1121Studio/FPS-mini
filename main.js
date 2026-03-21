@@ -61,8 +61,8 @@ const createScene = () => {
 
   // 回転（これが本体）
 gun.rotation = new BABYLON.Vector3(
-  Math.PI / 2,
-  -Math.PI
+ Math.PI / 2, 
+-Math.PI / 2,
 );
    
   // 透明バグ修正
