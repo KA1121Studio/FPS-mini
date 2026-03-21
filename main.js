@@ -15,11 +15,11 @@ const createScene = () => {
 
   camera.attachControl(canvas, true);
 
-  // WASD操作に変更
-  camera.keysUp = [87];    // W
-  camera.keysDown = [83];  // S
-  camera.keysLeft = [65];  // A
-  camera.keysRight = [68]; // D
+  // WASD操作
+  camera.keysUp = [87];
+  camera.keysDown = [83];
+  camera.keysLeft = [65];
+  camera.keysRight = [68];
 
   camera.speed = 0.4;
   camera.angularSensibility = 4000;
@@ -32,7 +32,7 @@ const createScene = () => {
   camera.checkCollisions = true;
   camera.ellipsoid = new BABYLON.Vector3(1, 1, 1);
 
-  // ===== ライト（明るく）=====
+  // ===== ライト =====
   const light = new BABYLON.HemisphericLight(
     "light",
     new BABYLON.Vector3(0, 1, 0),
@@ -48,35 +48,58 @@ const createScene = () => {
   });
 
   // ===== 銃 =====
- BABYLON.SceneLoader.ImportMesh("", "models/", "gun.glb", scene, (meshes) => {
-  const gun = meshes[0];
+  BABYLON.SceneLoader.ImportMesh("", "models/", "gun.glb", scene, (meshes) => {
+    const gun = meshes[0];
 
-  gun.parent = camera;
+    gun.parent = camera;
 
-  // 位置（少し上＋ちょい前）
-  gun.position = new BABYLON.Vector3(0.6, -0.4, 1.5);
+    // 位置
+    gun.position = new BABYLON.Vector3(0.6, -0.4, 1.5);
 
-  // サイズ
-  gun.scaling = new BABYLON.Vector3(0.25, 0.25, 0.25);
+    // サイズ
+    gun.scaling = new BABYLON.Vector3(0.25, 0.25, 0.25);
 
-  // 回転（これが本体）
-gun.rotation = new BABYLON.Vector3(
-  Math.PI / 2,
-  -Math.PI / 2,
-  -Math.PI / 2
-);
+    // ===== 回転（初期値）=====
+    let rotX = Math.PI / 2;
+    let rotY = -Math.PI / 2;
+    let rotZ = -Math.PI / 2;
 
-   
-  // 透明バグ修正
-  gun.getChildMeshes().forEach(mesh => {
-    if (mesh.material) {
-      mesh.material.alpha = 1;
-      mesh.material.backFaceCulling = true;
-      mesh.material.needDepthPrePass = true;
-    }
+    gun.rotation = new BABYLON.Vector3(rotX, rotY, rotZ);
+
+    // ===== デバッグ操作 =====
+    window.addEventListener("keydown", (e) => {
+      const step = 0.1;
+
+      switch(e.key) {
+        case "1": rotX += step; break;
+        case "2": rotX -= step; break;
+
+        case "3": rotY += step; break;
+        case "4": rotY -= step; break;
+
+        case "5": rotZ += step; break;
+        case "6": rotZ -= step; break;
+      }
+
+      gun.rotation = new BABYLON.Vector3(rotX, rotY, rotZ);
+
+      console.log("rotation:", {
+        x: rotX,
+        y: rotY,
+        z: rotZ
+      });
+    });
+
+    // ===== 透明バグ修正 =====
+    gun.getChildMeshes().forEach(mesh => {
+      if (mesh.material) {
+        mesh.material.alpha = 1;
+        mesh.material.backFaceCulling = true;
+        mesh.material.needDepthPrePass = true;
+      }
+    });
   });
-});
-  
+
   // ===== 敵 =====
   const enemy = BABYLON.MeshBuilder.CreateBox("enemy", {}, scene);
   enemy.position = new BABYLON.Vector3(0, 1, 10);
