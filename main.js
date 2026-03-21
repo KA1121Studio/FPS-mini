@@ -6,15 +6,25 @@ let camera;
 const createScene = () => {
   const scene = new BABYLON.Scene(engine);
 
-  // カメラ（FPS）
+  // ===== 空（明るく）=====
+  scene.clearColor = new BABYLON.Color3(0.6, 0.8, 1);
+
+  // ===== カメラ（FPS）=====
   camera = new BABYLON.UniversalCamera("camera",
     new BABYLON.Vector3(0, 2, -10), scene);
 
   camera.attachControl(canvas, true);
+
+  // WASD操作に変更
+  camera.keysUp = [87];    // W
+  camera.keysDown = [83];  // S
+  camera.keysLeft = [65];  // A
+  camera.keysRight = [68]; // D
+
   camera.speed = 0.4;
   camera.angularSensibility = 4000;
 
-  // 重力と衝突
+  // 重力＆衝突
   scene.gravity = new BABYLON.Vector3(0, -0.5, 0);
   scene.collisionsEnabled = true;
 
@@ -22,27 +32,48 @@ const createScene = () => {
   camera.checkCollisions = true;
   camera.ellipsoid = new BABYLON.Vector3(1, 1, 1);
 
-  // ライト
-  new BABYLON.HemisphericLight("light",
-    new BABYLON.Vector3(0, 1, 0), scene);
+  // ===== ライト（明るく）=====
+  const light = new BABYLON.HemisphericLight(
+    "light",
+    new BABYLON.Vector3(0, 1, 0),
+    scene
+  );
+  light.intensity = 1.2;
 
-  // ===== マップ読み込み =====
+  // ===== マップ =====
   BABYLON.SceneLoader.ImportMesh("", "models/", "map.glb", scene, (meshes) => {
     meshes.forEach(mesh => {
       mesh.checkCollisions = true;
     });
   });
 
-  // ===== 銃読み込み =====
+  // ===== 銃 =====
   BABYLON.SceneLoader.ImportMesh("", "models/", "gun.glb", scene, (meshes) => {
     const gun = meshes[0];
 
+    // カメラに固定
     gun.parent = camera;
-    gun.position = new BABYLON.Vector3(0.5, -0.5, 1);
-    gun.scaling = new BABYLON.Vector3(0.5, 0.5, 0.5);
+
+    // 位置調整（FPSっぽく）
+    gun.position = new BABYLON.Vector3(0.5, -0.6, 1.2);
+
+    // サイズ調整
+    gun.scaling = new BABYLON.Vector3(0.3, 0.3, 0.3);
+
+    // 向き調整
+    gun.rotation = new BABYLON.Vector3(0, Math.PI, 0);
+
+    // 透明バグ修正
+    gun.getChildMeshes().forEach(mesh => {
+      if (mesh.material) {
+        mesh.material.alpha = 1;
+        mesh.material.backFaceCulling = true;
+        mesh.material.needDepthPrePass = true;
+      }
+    });
   });
 
-  // ===== 敵（仮） =====
+  // ===== 敵 =====
   const enemy = BABYLON.MeshBuilder.CreateBox("enemy", {}, scene);
   enemy.position = new BABYLON.Vector3(0, 1, 10);
   enemy.checkCollisions = true;
