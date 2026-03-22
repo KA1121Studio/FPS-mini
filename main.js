@@ -47,26 +47,22 @@ const createScene = () => {
     });
   });
 
-  // ===== 銃（完成状態）=====
+  // ===== 銃 =====
   BABYLON.SceneLoader.ImportMesh("", "models/", "gun.glb", scene, (meshes) => {
     const gun = meshes[0];
 
     gun.parent = camera;
 
-    // 位置
     gun.position = new BABYLON.Vector3(0.4, -0.3, 1.6);
 
-    // 回転（最適化済み）
     gun.rotation = new BABYLON.Vector3(
       0.05,
       -1.75,
       0.03
     );
 
-    // サイズ
     gun.scaling = new BABYLON.Vector3(0.34, 0.34, 0.34);
 
-    // 透明対策
     gun.getChildMeshes().forEach(mesh => {
       if (mesh.material) {
         mesh.material.alpha = 1;
@@ -81,15 +77,29 @@ const createScene = () => {
   enemy.position = new BABYLON.Vector3(0, 1, 10);
   enemy.checkCollisions = true;
 
-  // ===== 射撃 =====
-  let canShoot = true;
+  // ===== 射撃（連射＋弱反動）=====
+  let isShooting = false;
+  let lastShot = 0;
+  const fireRate = 100; // 発射間隔(ms)
 
-  window.addEventListener("click", () => {
+  canvas.addEventListener("mousedown", () => {
+    isShooting = true;
+  });
 
-    if (!canShoot) return;
-    canShoot = false;
+  canvas.addEventListener("mouseup", () => {
+    isShooting = false;
+  });
 
-    // レイ
+  scene.onBeforeRenderObservable.add(() => {
+
+    if (!isShooting) return;
+
+    const now = Date.now();
+    if (now - lastShot < fireRate) return;
+
+    lastShot = now;
+
+    // ===== レイ =====
     const ray = scene.createPickingRay(
       engine.getRenderWidth() / 2,
       engine.getRenderHeight() / 2,
@@ -99,13 +109,13 @@ const createScene = () => {
 
     const hit = scene.pickWithRay(ray);
 
-    // 敵ヒット
+    // ===== 敵ヒット =====
     if (hit.pickedMesh && hit.pickedMesh.name === "enemy") {
       hit.pickedMesh.dispose();
       console.log("Enemy Down!");
     }
 
-    // 弾の線
+    // ===== 弾の線 =====
     if (hit.pickedPoint) {
       const points = [camera.position, hit.pickedPoint];
 
@@ -115,16 +125,12 @@ const createScene = () => {
 
       setTimeout(() => {
         line.dispose();
-      }, 50);
+      }, 30);
     }
 
-    // 反動
-    camera.rotation.x -= 0.05;
+    // ===== 反動（弱め）=====
+    camera.rotation.x -= 0.01;
 
-    // 連射制御
-    setTimeout(() => {
-      canShoot = true;
-    }, 200);
   });
 
   return scene;
