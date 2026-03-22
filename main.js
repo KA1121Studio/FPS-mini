@@ -1,3 +1,4 @@
+
 const canvas = document.getElementById("renderCanvas");
 const engine = new BABYLON.Engine(canvas, true);
 
@@ -54,14 +55,11 @@ const createScene = () => {
     gun.parent = camera;
 
     gun.position = new BABYLON.Vector3(0.4, -0.3, 1.6);
-
-    gun.rotation = new BABYLON.Vector3(
-      0.05,
-      -1.75,
-      0.03
-    );
-
+    gun.rotation = new BABYLON.Vector3(0.05, -1.75, 0.03);
     gun.scaling = new BABYLON.Vector3(0.34, 0.34, 0.34);
+
+    gun.alwaysSelectAsActiveMesh = true;
+    gun.isPickable = false;
 
     gun.getChildMeshes().forEach(mesh => {
       if (mesh.material) {
@@ -76,11 +74,25 @@ const createScene = () => {
   const enemy = BABYLON.MeshBuilder.CreateBox("enemy", {}, scene);
   enemy.position = new BABYLON.Vector3(0, 1, 10);
   enemy.checkCollisions = true;
+  enemy.isEnemy = true;
 
-  // ===== 射撃（連射＋弱反動）=====
+  // ===== 薬莢テンプレ =====
+  let shellTemplate = BABYLON.MeshBuilder.CreateCylinder("shell", {
+    height: 0.2,
+    diameter: 0.05
+  }, scene);
+
+  shellTemplate.isVisible = false;
+  shellTemplate.isPickable = false;
+
+  scene.shells = [];
+
+  // ===== 射撃 =====
   let isShooting = false;
   let lastShot = 0;
-  const fireRate = 100; // 発射間隔(ms)
+  const fireRate = 100;
+
+  let recoil = 0;
 
   canvas.addEventListener("mousedown", () => {
     isShooting = true;
@@ -92,44 +104,83 @@ const createScene = () => {
 
   scene.onBeforeRenderObservable.add(() => {
 
-    if (!isShooting) return;
+    // ===== 射撃処理 =====
+    if (isShooting) {
+      const now = Date.now();
+      if (now - lastShot > fireRate) {
 
-    const now = Date.now();
-    if (now - lastShot < fireRate) return;
+        lastShot = now;
 
-    lastShot = now;
+        const ray = scene.createPickingRay(
+          engine.getRenderWidth() / 2,
+          engine.getRenderHeight() / 2,
+          BABYLON.Matrix.Identity(),
+          camera
+        );
 
-    // ===== レイ =====
-    const ray = scene.createPickingRay(
-      engine.getRenderWidth() / 2,
-      engine.getRenderHeight() / 2,
-      BABYLON.Matrix.Identity(),
-      camera
-    );
+        const hit = scene.pickWithRay(ray);
 
-    const hit = scene.pickWithRay(ray);
+        // 敵ヒット
+        if (hit.pickedMesh && hit.pickedMesh.isEnemy) {
+          hit.pickedMesh.dispose();
+          console.log("Enemy Down!");
+        }
 
-    // ===== 敵ヒット =====
-    if (hit.pickedMesh && hit.pickedMesh.name === "enemy") {
-      hit.pickedMesh.dispose();
-      console.log("Enemy Down!");
+        // 弾の線
+        if (hit.pickedPoint) {
+          const line = BABYLON.MeshBuilder.CreateLines("shot", {
+            points: [camera.position, hit.pickedPoint]
+          }, scene);
+
+          setTimeout(() => line.dispose(), 30);
+        }
+
+        // ===== 反動 =====
+        recoil += 0.02;
+
+        // ===== 薬莢生成 =====
+        const shell = shellTemplate.clone("shellInstance");
+        shell.isVisible = true;
+
+        const right = camera.getDirection(BABYLON.Axis.X);
+
+        shell.position = camera.position
+          .add(right.scale(0.3))
+          .add(new BABYLON.Vector3(0, -0.2, 0));
+
+        shell.rotation = new BABYLON.Vector3(
+          Math.random(),
+          Math.random(),
+          Math.random()
+        );
+
+        shell.velocity = right.scale(0.2).add(new BABYLON.Vector3(0, 0.1, 0));
+
+        scene.shells.push(shell);
+
+        setTimeout(() => {
+          shell.dispose();
+        }, 3000);
+      }
     }
 
-    // ===== 弾の線 =====
-    if (hit.pickedPoint) {
-      const points = [camera.position, hit.pickedPoint];
+    // ===== 反動戻し =====
+    camera.rotation.x -= recoil;
+    recoil *= 0.9;
 
-      const line = BABYLON.MeshBuilder.CreateLines("shot", {
-        points: points
-      }, scene);
+    // ===== 薬莢更新 =====
+    scene.shells.forEach((s) => {
+      s.velocity.y -= 0.01;
+      s.position.addInPlace(s.velocity);
 
-      setTimeout(() => {
-        line.dispose();
-      }, 30);
-    }
+      s.rotation.x += 0.2;
+      s.rotation.y += 0.2;
 
-    // ===== 反動（弱め）=====
-    camera.rotation.x -= 0.01;
+      if (s.position.y < 0) {
+        s.position.y = 0;
+        s.velocity = BABYLON.Vector3.Zero();
+      }
+    });
 
   });
 
@@ -145,6 +196,13 @@ engine.runRenderLoop(() => {
 // FPSモード
 canvas.addEventListener("click", () => {
   canvas.requestPointerLock();
+});
+
+// ジャンプ
+window.addEventListener("keydown", (e) => {
+  if (e.code === "Space") {
+    camera.cameraDirection.y = 0.2;
+  }
 });
 
 window.addEventListener("resize", () => {
