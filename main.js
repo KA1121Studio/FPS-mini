@@ -3,19 +3,38 @@ const engine = new BABYLON.Engine(canvas, true);
 
 let camera;
 
+// ===== デバッグモード =====
+let debugMode = false;
+
+window.mode = () => {
+  console.log("モード選択:");
+  console.log("1: debugモード ON");
+  console.log("2: debugモード OFF");
+
+  window.setMode = (num) => {
+    if (num === 1) {
+      debugMode = true;
+      console.log("DEBUGモード ON");
+    } else {
+      debugMode = false;
+      console.log("DEBUGモード OFF");
+    }
+  };
+};
+
 const createScene = () => {
   const scene = new BABYLON.Scene(engine);
 
-  // ===== 空（明るく）=====
+  // ===== 空 =====
   scene.clearColor = new BABYLON.Color3(0.6, 0.8, 1);
 
-  // ===== カメラ（FPS）=====
+  // ===== カメラ =====
   camera = new BABYLON.UniversalCamera("camera",
     new BABYLON.Vector3(0, 2, -10), scene);
 
   camera.attachControl(canvas, true);
 
-  // WASD操作
+  // WASD
   camera.keysUp = [87];
   camera.keysDown = [83];
   camera.keysLeft = [65];
@@ -24,7 +43,7 @@ const createScene = () => {
   camera.speed = 0.4;
   camera.angularSensibility = 4000;
 
-  // 重力＆衝突
+  // 衝突
   scene.gravity = new BABYLON.Vector3(0, -0.5, 0);
   scene.collisionsEnabled = true;
 
@@ -53,24 +72,29 @@ const createScene = () => {
 
     gun.parent = camera;
 
-    // 位置
-    gun.position = new BABYLON.Vector3(0.6, -0.4, 1.5);
-
-    // サイズ
-    gun.scaling = new BABYLON.Vector3(0.25, 0.25, 0.25);
-
-    // ===== 回転（初期値）=====
+    // 初期値（あとで調整できる）
     let rotX = Math.PI / 2;
     let rotY = -Math.PI / 2;
     let rotZ = -Math.PI / 2;
 
+    let posX = 0.6;
+    let posY = -0.4;
+    let posZ = 1.5;
+
     gun.rotation = new BABYLON.Vector3(rotX, rotY, rotZ);
+    gun.position = new BABYLON.Vector3(posX, posY, posZ);
+    gun.scaling = new BABYLON.Vector3(0.25, 0.25, 0.25);
 
     // ===== デバッグ操作 =====
     window.addEventListener("keydown", (e) => {
+
+      if (!debugMode) return;
+
       const step = 0.1;
 
       switch(e.key) {
+
+        // 回転
         case "1": rotX += step; break;
         case "2": rotX -= step; break;
 
@@ -79,18 +103,26 @@ const createScene = () => {
 
         case "5": rotZ += step; break;
         case "6": rotZ -= step; break;
+
+        // 位置
+        case "ArrowUp": posZ += step; break;
+        case "ArrowDown": posZ -= step; break;
+        case "ArrowLeft": posX -= step; break;
+        case "ArrowRight": posX += step; break;
+
+        case "q": posY += step; break;
+        case "e": posY -= step; break;
       }
 
       gun.rotation = new BABYLON.Vector3(rotX, rotY, rotZ);
+      gun.position = new BABYLON.Vector3(posX, posY, posZ);
 
-      console.log("rotation:", {
-        x: rotX,
-        y: rotY,
-        z: rotZ
-      });
+      console.log("rotation:", { x: rotX, y: rotY, z: rotZ });
+      console.log("position:", { x: posX, y: posY, z: posZ });
+
     });
 
-    // ===== 透明バグ修正 =====
+    // ===== 透明対策 =====
     gun.getChildMeshes().forEach(mesh => {
       if (mesh.material) {
         mesh.material.alpha = 1;
