@@ -3,27 +3,7 @@ const engine = new BABYLON.Engine(canvas, true);
 
 let camera;
 
-// ===== デバッグモード =====
-let debugMode = false;
 
-window.mode = () => {
-  console.log("モード選択:");
-  console.log("1: debugモード ON");
-  console.log("2: debugモード OFF");
-
-  window.setMode = (num) => {
-    if (num === 1) {
-      debugMode = true;
-      console.log("DEBUGモード ON");
-    } else {
-      debugMode = false;
-      console.log("DEBUGモード OFF");
-    }
-  };
-};
-
-const createScene = () => {
-  const scene = new BABYLON.Scene(engine);
 
   // ===== 空 =====
   scene.clearColor = new BABYLON.Color3(0.6, 0.8, 1);
@@ -67,77 +47,41 @@ const createScene = () => {
   });
 
   // ===== 銃 =====
-  BABYLON.SceneLoader.ImportMesh("", "models/", "gun.glb", scene, (meshes) => {
-    const gun = meshes[0];
+BABYLON.SceneLoader.ImportMesh("", "models/", "gun.glb", scene, (meshes) => {
+  const gun = meshes[0];
 
-    gun.parent = camera;
+  gun.parent = camera;
 
-    // 初期値
-    let rotX = Math.PI / 2;
-    let rotY = -Math.PI / 2;
-    let rotZ = -Math.PI / 2;
+  // ===== 最終ポジション =====
+  gun.position = new BABYLON.Vector3(
+    0.4,
+    -0.3,
+    1.6
+  );
 
-    let posX = 0.6;
-    let posY = -0.4;
-    let posZ = 1.5;
+  // ===== 最終回転 =====
+  gun.rotation = new BABYLON.Vector3(
+    -6.229203673205098,
+    4.529203673205104,
+    0.02920367320510417
+  );
 
-    let scale = 0.1;
+  // ===== サイズ =====
+  gun.scaling = new BABYLON.Vector3(
+    0.34,
+    0.34,
+    0.34
+  );
 
-    gun.rotation = new BABYLON.Vector3(rotX, rotY, rotZ);
-    gun.position = new BABYLON.Vector3(posX, posY, posZ);
-    gun.scaling = new BABYLON.Vector3(scale, scale, scale);
-
-    // ===== デバッグ操作 =====
-    window.addEventListener("keydown", (e) => {
-
-      if (!debugMode) return;
-
-      const step = 0.1;
-
-      switch(e.key) {
-
-        // 回転
-        case "1": rotX += step; break;
-        case "2": rotX -= step; break;
-
-        case "3": rotY += step; break;
-        case "4": rotY -= step; break;
-
-        case "5": rotZ += step; break;
-        case "6": rotZ -= step; break;
-
-        // 位置
-        case "ArrowUp": posZ += step; break;
-        case "ArrowDown": posZ -= step; break;
-        case "ArrowLeft": posX -= step; break;
-        case "ArrowRight": posX += step; break;
-
-        case "q": posY += step; break;
-        case "e": posY -= step; break;
-
-        // サイズ
-        case "7": scale += 0.01; break;
-        case "8": scale -= 0.01; break;
-      }
-
-      gun.rotation = new BABYLON.Vector3(rotX, rotY, rotZ);
-      gun.position = new BABYLON.Vector3(posX, posY, posZ);
-      gun.scaling = new BABYLON.Vector3(scale, scale, scale);
-
-      console.log("rotation:", { x: rotX, y: rotY, z: rotZ });
-      console.log("position:", { x: posX, y: posY, z: posZ });
-      console.log("scale:", scale);
-    });
-
-    // ===== 透明対策 =====
-    gun.getChildMeshes().forEach(mesh => {
-      if (mesh.material) {
-        mesh.material.alpha = 1;
-        mesh.material.backFaceCulling = true;
-        mesh.material.needDepthPrePass = true;
-      }
-    });
+  // ===== 透明対策 =====
+  gun.getChildMeshes().forEach(mesh => {
+    if (mesh.material) {
+      mesh.material.alpha = 1;
+      mesh.material.backFaceCulling = true;
+      mesh.material.needDepthPrePass = true;
+    }
   });
+});
 
   // ===== 敵 =====
   const enemy = BABYLON.MeshBuilder.CreateBox("enemy", {}, scene);
