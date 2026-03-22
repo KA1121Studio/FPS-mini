@@ -72,7 +72,7 @@ const createScene = () => {
 
     gun.parent = camera;
 
-    // 初期値（あとで調整できる）
+    // 初期値
     let rotX = Math.PI / 2;
     let rotY = -Math.PI / 2;
     let rotZ = -Math.PI / 2;
@@ -81,9 +81,11 @@ const createScene = () => {
     let posY = -0.4;
     let posZ = 1.5;
 
+    let scale = 0.1;
+
     gun.rotation = new BABYLON.Vector3(rotX, rotY, rotZ);
     gun.position = new BABYLON.Vector3(posX, posY, posZ);
-    gun.scaling = new BABYLON.Vector3(0.0001, 0.0001, 0.0001);
+    gun.scaling = new BABYLON.Vector3(scale, scale, scale);
 
     // ===== デバッグ操作 =====
     window.addEventListener("keydown", (e) => {
@@ -112,14 +114,19 @@ const createScene = () => {
 
         case "q": posY += step; break;
         case "e": posY -= step; break;
+
+        // サイズ
+        case "7": scale += 0.01; break;
+        case "8": scale -= 0.01; break;
       }
 
       gun.rotation = new BABYLON.Vector3(rotX, rotY, rotZ);
       gun.position = new BABYLON.Vector3(posX, posY, posZ);
+      gun.scaling = new BABYLON.Vector3(scale, scale, scale);
 
       console.log("rotation:", { x: rotX, y: rotY, z: rotZ });
       console.log("position:", { x: posX, y: posY, z: posZ });
-
+      console.log("scale:", scale);
     });
 
     // ===== 透明対策 =====
@@ -138,8 +145,14 @@ const createScene = () => {
   enemy.checkCollisions = true;
 
   // ===== 射撃 =====
+  let canShoot = true;
+
   window.addEventListener("click", () => {
 
+    if (!canShoot) return;
+    canShoot = false;
+
+    // レイ
     const ray = scene.createPickingRay(
       engine.getRenderWidth() / 2,
       engine.getRenderHeight() / 2,
@@ -149,11 +162,32 @@ const createScene = () => {
 
     const hit = scene.pickWithRay(ray);
 
+    // 敵ヒット
     if (hit.pickedMesh && hit.pickedMesh.name === "enemy") {
       hit.pickedMesh.dispose();
       console.log("Enemy Down!");
     }
 
+    // 弾の線
+    if (hit.pickedPoint) {
+      const points = [camera.position, hit.pickedPoint];
+
+      const line = BABYLON.MeshBuilder.CreateLines("shot", {
+        points: points
+      }, scene);
+
+      setTimeout(() => {
+        line.dispose();
+      }, 50);
+    }
+
+    // 反動
+    camera.rotation.x -= 0.05;
+
+    // 連射制御
+    setTimeout(() => {
+      canShoot = true;
+    }, 200);
   });
 
   return scene;
