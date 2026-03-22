@@ -83,7 +83,7 @@ const createScene = () => {
 
     gun.rotation = new BABYLON.Vector3(rotX, rotY, rotZ);
     gun.position = new BABYLON.Vector3(posX, posY, posZ);
-    gun.scaling = new BABYLON.Vector3(0.25, 0.25, 0.25);
+    gun.scaling = new BABYLON.Vector3(0.05, 0.05, 0.05);
 
     // ===== デバッグ操作 =====
     window.addEventListener("keydown", (e) => {
