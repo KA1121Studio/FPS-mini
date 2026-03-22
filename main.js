@@ -3,7 +3,8 @@ const engine = new BABYLON.Engine(canvas, true);
 
 let camera;
 
-
+const createScene = () => {
+  const scene = new BABYLON.Scene(engine);
 
   // ===== 空 =====
   scene.clearColor = new BABYLON.Color3(0.6, 0.8, 1);
@@ -46,42 +47,34 @@ let camera;
     });
   });
 
-  // ===== 銃 =====
-BABYLON.SceneLoader.ImportMesh("", "models/", "gun.glb", scene, (meshes) => {
-  const gun = meshes[0];
+  // ===== 銃（完成状態）=====
+  BABYLON.SceneLoader.ImportMesh("", "models/", "gun.glb", scene, (meshes) => {
+    const gun = meshes[0];
 
-  gun.parent = camera;
+    gun.parent = camera;
 
-  // ===== 最終ポジション =====
-  gun.position = new BABYLON.Vector3(
-    0.4,
-    -0.3,
-    1.6
-  );
+    // 位置
+    gun.position = new BABYLON.Vector3(0.4, -0.3, 1.6);
 
-  // ===== 最終回転 =====
-  gun.rotation = new BABYLON.Vector3(
-    -6.229203673205098,
-    4.529203673205104,
-    0.02920367320510417
-  );
+    // 回転（最適化済み）
+    gun.rotation = new BABYLON.Vector3(
+      0.05,
+      -1.75,
+      0.03
+    );
 
-  // ===== サイズ =====
-  gun.scaling = new BABYLON.Vector3(
-    0.34,
-    0.34,
-    0.34
-  );
+    // サイズ
+    gun.scaling = new BABYLON.Vector3(0.34, 0.34, 0.34);
 
-  // ===== 透明対策 =====
-  gun.getChildMeshes().forEach(mesh => {
-    if (mesh.material) {
-      mesh.material.alpha = 1;
-      mesh.material.backFaceCulling = true;
-      mesh.material.needDepthPrePass = true;
-    }
+    // 透明対策
+    gun.getChildMeshes().forEach(mesh => {
+      if (mesh.material) {
+        mesh.material.alpha = 1;
+        mesh.material.backFaceCulling = true;
+        mesh.material.needDepthPrePass = true;
+      }
+    });
   });
-});
 
   // ===== 敵 =====
   const enemy = BABYLON.MeshBuilder.CreateBox("enemy", {}, scene);
