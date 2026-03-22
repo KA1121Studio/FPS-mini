@@ -126,7 +126,7 @@ const createScene = () => {
     gun.getChildMeshes().forEach(mesh => {
       if (mesh.material) {
         mesh.material.alpha = 1;
-        mesh.material.backFaceCulling = true;
+        mesh.material.backFaceCulling = false;
         mesh.material.needDepthPrePass = true;
       }
     });
