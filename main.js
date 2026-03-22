@@ -67,8 +67,37 @@ const createScene = () => {
   });
 
   // ===== 銃 =====
-  BABYLON.SceneLoader.ImportMesh("", "models/", "gun.glb", scene, (meshes) => {
-    const gun = meshes[0];
+
+    BABYLON.SceneLoader.ImportMesh("", "models/", "gun.glb", scene, (meshes) => {
+
+  const parent = new BABYLON.TransformNode("gunParent", scene);
+
+  meshes.forEach(mesh => {
+    mesh.parent = parent;
+  });
+
+  // カメラにくっつける
+  parent.parent = camera;
+
+  // 位置
+  parent.position = new BABYLON.Vector3(0.4, -0.2, 1.2);
+
+  // サイズ
+  parent.scaling = new BABYLON.Vector3(0.15, 0.15, 0.15);
+
+  // 向き
+  parent.rotation = new BABYLON.Vector3(Math.PI, Math.PI, 0);
+
+  // 透明＆両面表示
+  meshes.forEach(mesh => {
+    if (mesh.material) {
+      mesh.material.alpha = 1;
+      mesh.material.backFaceCulling = false;
+      mesh.material.sideOrientation = BABYLON.Material.DOUBLESIDE;
+    }
+  });
+
+});
 
     gun.parent = camera;
 
