@@ -66,53 +66,33 @@ const createScene = () => {
     });
   });
 
-  // ===== 銃 =====
+  // ===== 手（銃モデル）=====
+  BABYLON.SceneLoader.ImportMesh("", "models/", "gun.glb", scene, (meshes) => {
 
-    BABYLON.SceneLoader.ImportMesh("", "models/", "gun.glb", scene, (meshes) => {
+    // 全メッシュまとめる
+    const parent = new BABYLON.TransformNode("gunParent", scene);
 
-  const parent = new BABYLON.TransformNode("gunParent", scene);
+    meshes.forEach(mesh => {
+      mesh.parent = parent;
+    });
 
-  meshes.forEach(mesh => {
-    mesh.parent = parent;
-  });
+    // カメラに固定
+    parent.parent = camera;
 
-  // カメラにくっつける
-  parent.parent = camera;
+    // ===== 初期値 =====
+    let rotX = Math.PI;
+    let rotY = Math.PI;
+    let rotZ = 0;
 
-  // 位置
-  parent.position = new BABYLON.Vector3(0.4, -0.2, 1.2);
+    let posX = 0.4;
+    let posY = -0.2;
+    let posZ = 1.2;
 
-  // サイズ
-  parent.scaling = new BABYLON.Vector3(0.15, 0.15, 0.15);
+    let scale = 0.15;
 
-  // 向き
-  parent.rotation = new BABYLON.Vector3(Math.PI, Math.PI, 0);
-
-  // 透明＆両面表示
-  meshes.forEach(mesh => {
-    if (mesh.material) {
-      mesh.material.alpha = 1;
-      mesh.material.backFaceCulling = false;
-      mesh.material.sideOrientation = BABYLON.Material.DOUBLESIDE;
-    }
-  });
-
-});
-
-    gun.parent = camera;
-
-    // 初期値（あとで調整できる）
-    let rotX = Math.PI / 2;
-    let rotY = -Math.PI / 2;
-    let rotZ = -Math.PI / 2;
-
-    let posX = 0.6;
-    let posY = -0.4;
-    let posZ = 1.5;
-
-    gun.rotation = new BABYLON.Vector3(rotX, rotY, rotZ);
-    gun.position = new BABYLON.Vector3(posX, posY, posZ);
-    gun.scaling = new BABYLON.Vector3(0.0001, 0.0001, 0.0001);
+    parent.rotation = new BABYLON.Vector3(rotX, rotY, rotZ);
+    parent.position = new BABYLON.Vector3(posX, posY, posZ);
+    parent.scaling = new BABYLON.Vector3(scale, scale, scale);
 
     // ===== デバッグ操作 =====
     window.addEventListener("keydown", (e) => {
@@ -141,24 +121,31 @@ const createScene = () => {
 
         case "q": posY += step; break;
         case "e": posY -= step; break;
+
+        // サイズ
+        case "7": scale += 0.01; break;
+        case "8": scale -= 0.01; break;
       }
 
-      gun.rotation = new BABYLON.Vector3(rotX, rotY, rotZ);
-      gun.position = new BABYLON.Vector3(posX, posY, posZ);
+      parent.rotation = new BABYLON.Vector3(rotX, rotY, rotZ);
+      parent.position = new BABYLON.Vector3(posX, posY, posZ);
+      parent.scaling = new BABYLON.Vector3(scale, scale, scale);
 
       console.log("rotation:", { x: rotX, y: rotY, z: rotZ });
       console.log("position:", { x: posX, y: posY, z: posZ });
+      console.log("scale:", scale);
 
     });
 
-    // ===== 透明対策 =====
-    gun.getChildMeshes().forEach(mesh => {
+    // ===== 表示バグ対策 =====
+    meshes.forEach(mesh => {
       if (mesh.material) {
         mesh.material.alpha = 1;
         mesh.material.backFaceCulling = false;
-        mesh.material.needDepthPrePass = true;
+        mesh.material.sideOrientation = BABYLON.Material.DOUBLESIDE;
       }
     });
+
   });
 
   // ===== 敵 =====
