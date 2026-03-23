@@ -1,4 +1,3 @@
-
 const canvas = document.getElementById("renderCanvas");
 const engine = new BABYLON.Engine(canvas, true);
 
@@ -16,7 +15,6 @@ const createScene = () => {
 
   camera.attachControl(canvas, true);
 
-  // WASD
   camera.keysUp = [87];
   camera.keysDown = [83];
   camera.keysLeft = [65];
@@ -55,14 +53,11 @@ const createScene = () => {
     gun.parent = camera;
 
     gun.position = new BABYLON.Vector3(0.4, -0.3, 1.6);
-
-    gun.rotation = new BABYLON.Vector3(
-      0.05,
-      -1.75,
-      0.03
-    );
-
+    gun.rotation = new BABYLON.Vector3(0.05, -1.75, 0.03);
     gun.scaling = new BABYLON.Vector3(0.34, 0.34, 0.34);
+
+    gun.alwaysSelectAsActiveMesh = true;
+    gun.isPickable = false;
 
     gun.getChildMeshes().forEach(mesh => {
       if (mesh.material) {
@@ -73,23 +68,23 @@ const createScene = () => {
     });
   });
 
+  // ===== 薬莢モデル読み込み =====
+  let shellTemplate = null;
+
+  BABYLON.SceneLoader.ImportMesh("", "models/", "shell.glb", scene, (meshes) => {
+    shellTemplate = meshes[0];
+    shellTemplate.setEnabled(false);
+  });
+
+  scene.shells = [];
+
   // ===== 敵 =====
   const enemy = BABYLON.MeshBuilder.CreateBox("enemy", {}, scene);
   enemy.position = new BABYLON.Vector3(0, 1, 10);
   enemy.checkCollisions = true;
+  enemy.isEnemy = true;
 
-  // ===== 薬莢テンプレ =====
-  let shellTemplate = BABYLON.MeshBuilder.CreateCylinder("shell", {
-    height: 0.2,
-    diameter: 0.05
-  }, scene);
-
-  shellTemplate.isVisible = false;
-  shellTemplate.isPickable = false;
-
-  scene.shells = [];
-
-  // ===== 射撃（連射＋弱反動）=====
+  // ===== 射撃 =====
   let isShooting = false;
   let lastShot = 0;
   const fireRate = 100;
@@ -106,10 +101,10 @@ const createScene = () => {
 
   scene.onBeforeRenderObservable.add(() => {
 
-    // ===== 射撃 =====
+    // ===== 射撃処理 =====
     if (isShooting) {
       const now = Date.now();
-      if (now - lastShot >= fireRate) {
+      if (now - lastShot > fireRate) {
 
         lastShot = now;
 
@@ -122,16 +117,16 @@ const createScene = () => {
 
         const hit = scene.pickWithRay(ray);
 
-        if (hit.pickedMesh && hit.pickedMesh.name === "enemy") {
+        // 敵ヒット
+        if (hit.pickedMesh && hit.pickedMesh.isEnemy) {
           hit.pickedMesh.dispose();
           console.log("Enemy Down!");
         }
 
+        // 弾の線
         if (hit.pickedPoint) {
-          const points = [camera.position, hit.pickedPoint];
-
           const line = BABYLON.MeshBuilder.CreateLines("shot", {
-            points: points
+            points: [camera.position, hit.pickedPoint]
           }, scene);
 
           setTimeout(() => {
@@ -143,38 +138,46 @@ const createScene = () => {
         recoil += 0.02;
 
         // ===== 薬莢生成 =====
-        const shell = shellTemplate.clone("shellInstance");
-        shell.isVisible = true;
+        if (shellTemplate) {
 
-        const right = camera.getDirection(BABYLON.Axis.X);
+          const shell = shellTemplate.clone("shellInstance");
+          shell.setEnabled(true);
 
-        shell.position = camera.position
-          .add(right.scale(0.3))
-          .add(new BABYLON.Vector3(0, -0.2, 0));
+          const right = camera.getDirection(BABYLON.Axis.X);
 
-        shell.rotation = new BABYLON.Vector3(
-          Math.random(),
-          Math.random(),
-          Math.random()
-        );
+          shell.position = camera.position
+            .add(right.scale(0.3))
+            .add(new BABYLON.Vector3(0, -0.2, 0));
 
-        shell.velocity = right.scale(0.2)
-          .add(new BABYLON.Vector3(0, 0.1, 0));
+          shell.scaling = new BABYLON.Vector3(0.2, 0.2, 0.2);
 
-        scene.shells.push(shell);
+          shell.rotation = new BABYLON.Vector3(
+            Math.random() * Math.PI,
+            Math.random() * Math.PI,
+            Math.random() * Math.PI
+          );
 
-        setTimeout(() => {
-          shell.dispose();
-        }, 3000);
+          shell.velocity = right.scale(0.25)
+            .add(new BABYLON.Vector3(0, 0.15, 0));
+
+          scene.shells.push(shell);
+
+          setTimeout(() => {
+            shell.dispose();
+          }, 3000);
+        }
       }
     }
 
-    // ===== 反動戻り =====
+    // ===== 反動戻し =====
     camera.rotation.x -= recoil;
     recoil *= 0.9;
 
-    // ===== 薬莢更新 =====
+    // ===== 薬莢の物理 =====
     scene.shells.forEach((s) => {
+
+      if (!s) return;
+
       s.velocity.y -= 0.01;
       s.position.addInPlace(s.velocity);
 
@@ -198,11 +201,18 @@ engine.runRenderLoop(() => {
   scene.render();
 });
 
+// FPSモード
 canvas.addEventListener("click", () => {
   canvas.requestPointerLock();
+});
+
+// ジャンプ
+window.addEventListener("keydown", (e) => {
+  if (e.code === "Space") {
+    camera.cameraDirection.y = 0.2;
+  }
 });
 
 window.addEventListener("resize", () => {
   engine.resize();
 });
-
