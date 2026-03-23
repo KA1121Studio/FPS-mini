@@ -58,14 +58,6 @@ const createScene = () => {
 
     gun.alwaysSelectAsActiveMesh = true;
     gun.isPickable = false;
-
-    gun.getChildMeshes().forEach(mesh => {
-      if (mesh.material) {
-        mesh.material.alpha = 1;
-        mesh.material.backFaceCulling = true;
-        mesh.material.needDepthPrePass = true;
-      }
-    });
   });
 
   // ===== 薬莢モデル =====
@@ -78,30 +70,26 @@ const createScene = () => {
 
   scene.shells = [];
 
-  // ===== デバッグ用パラメータ =====
+  // ===== デバッグ =====
+  let debugMode = false;
+  let debugShell = null;
+
   let shellOffset = new BABYLON.Vector3(0.3, -0.2, 0);
   let shellScale = 0.2;
 
   // ===== 敵 =====
   const enemy = BABYLON.MeshBuilder.CreateBox("enemy", {}, scene);
   enemy.position = new BABYLON.Vector3(0, 1, 10);
-  enemy.checkCollisions = true;
   enemy.isEnemy = true;
 
   // ===== 射撃 =====
   let isShooting = false;
   let lastShot = 0;
   const fireRate = 100;
-
   let recoil = 0;
 
-  canvas.addEventListener("mousedown", () => {
-    isShooting = true;
-  });
-
-  canvas.addEventListener("mouseup", () => {
-    isShooting = false;
-  });
+  canvas.addEventListener("mousedown", () => isShooting = true);
+  canvas.addEventListener("mouseup", () => isShooting = false);
 
   scene.onBeforeRenderObservable.add(() => {
 
@@ -123,7 +111,6 @@ const createScene = () => {
 
         if (hit.pickedMesh && hit.pickedMesh.isEnemy) {
           hit.pickedMesh.dispose();
-          console.log("Enemy Down!");
         }
 
         if (hit.pickedPoint) {
@@ -134,13 +121,11 @@ const createScene = () => {
           setTimeout(() => line.dispose(), 30);
         }
 
-        // ===== 反動 =====
         recoil += 0.02;
 
-        // ===== 薬莢 =====
+        // ===== 薬莢生成 =====
         if (shellTemplate) {
-
-          const shell = shellTemplate.clone("shellInstance");
+          const shell = shellTemplate.clone("shell");
           shell.setEnabled(true);
 
           const right = camera.getDirection(BABYLON.Axis.X);
@@ -149,11 +134,7 @@ const createScene = () => {
             .add(right.scale(shellOffset.x))
             .add(new BABYLON.Vector3(0, shellOffset.y, shellOffset.z));
 
-          shell.scaling = new BABYLON.Vector3(
-            shellScale,
-            shellScale,
-            shellScale
-          );
+          shell.scaling = new BABYLON.Vector3(shellScale, shellScale, shellScale);
 
           shell.rotation = new BABYLON.Vector3(
             Math.random() * Math.PI,
@@ -171,7 +152,7 @@ const createScene = () => {
       }
     }
 
-    // ===== 反動戻し =====
+    // ===== 反動 =====
     camera.rotation.x -= recoil;
     recoil *= 0.9;
 
@@ -191,48 +172,69 @@ const createScene = () => {
       }
     });
 
+    // ===== デバッグ表示 =====
+    if (debugMode && debugShell && camera) {
+      const right = camera.getDirection(BABYLON.Axis.X);
+
+      debugShell.position = camera.position
+        .add(right.scale(shellOffset.x))
+        .add(new BABYLON.Vector3(0, shellOffset.y, shellOffset.z));
+
+      debugShell.scaling = new BABYLON.Vector3(shellScale, shellScale, shellScale);
+    }
+
   });
 
-  // ===== デバッグUI =====
-  const gui = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
-
-  function createSlider(label, min, max, value, onChange) {
-    const panel = new BABYLON.GUI.StackPanel();
-    panel.width = "220px";
-    panel.isVertical = true;
-    panel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
-
-    const header = new BABYLON.GUI.TextBlock();
-    header.text = label + ": " + value.toFixed(2);
-    header.height = "30px";
-    header.color = "white";
-    panel.addControl(header);
-
-    const slider = new BABYLON.GUI.Slider();
-    slider.minimum = min;
-    slider.maximum = max;
-    slider.value = value;
-    slider.height = "20px";
-
-    slider.onValueChangedObservable.add((v) => {
-      header.text = label + ": " + v.toFixed(2);
-      onChange(v);
-    });
-
-    panel.addControl(slider);
-    gui.addControl(panel);
-  }
-
-  createSlider("X位置", -1, 1, shellOffset.x, v => shellOffset.x = v);
-  createSlider("Y位置", -1, 1, shellOffset.y, v => shellOffset.y = v);
-  createSlider("Z位置", -1, 1, shellOffset.z, v => shellOffset.z = v);
-  createSlider("サイズ", 0.05, 1, shellScale, v => shellScale = v);
-
-  // ===== Inspector =====
+  // ===== キー操作 =====
   window.addEventListener("keydown", (e) => {
-    if (e.key === "i") {
-      scene.debugLayer.show();
+
+    // デバッグON/OFF
+    if (e.key === "p") {
+      debugMode = !debugMode;
+      console.log("DEBUG:", debugMode ? "ON" : "OFF");
+
+      if (debugMode && shellTemplate) {
+        debugShell = shellTemplate.clone("debugShell");
+        debugShell.setEnabled(true);
+      } else {
+        if (debugShell) {
+          debugShell.dispose();
+          debugShell = null;
+        }
+      }
     }
+
+    if (!debugMode) return;
+
+    const step = 0.05;
+
+    switch (e.key) {
+
+      case "ArrowRight": shellOffset.x += step; break;
+      case "ArrowLeft": shellOffset.x -= step; break;
+
+      case "ArrowUp": shellOffset.y += step; break;
+      case "ArrowDown": shellOffset.y -= step; break;
+
+      case "q": shellOffset.z += step; break;
+      case "e": shellOffset.z -= step; break;
+
+      case "+":
+      case "=": shellScale += 0.05; break;
+
+      case "-": shellScale -= 0.05; break;
+
+      case "c":
+        console.log("=== COPY ===");
+        console.log(`shellOffset = new BABYLON.Vector3(${shellOffset.x}, ${shellOffset.y}, ${shellOffset.z});`);
+        console.log(`shellScale = ${shellScale};`);
+        break;
+    }
+
+    console.log(
+      `位置: new BABYLON.Vector3(${shellOffset.x.toFixed(2)}, ${shellOffset.y.toFixed(2)}, ${shellOffset.z.toFixed(2)})`
+    );
+    console.log(`サイズ: ${shellScale.toFixed(2)}`);
   });
 
   return scene;
@@ -248,7 +250,6 @@ canvas.addEventListener("click", () => {
   canvas.requestPointerLock();
 });
 
-// ジャンプ
 window.addEventListener("keydown", (e) => {
   if (e.code === "Space") {
     camera.cameraDirection.y = 0.2;
