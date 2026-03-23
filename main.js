@@ -1,4 +1,4 @@
-
+<script>
 const canvas = document.getElementById("renderCanvas");
 const engine = new BABYLON.Engine(canvas, true);
 
@@ -55,11 +55,14 @@ const createScene = () => {
     gun.parent = camera;
 
     gun.position = new BABYLON.Vector3(0.4, -0.3, 1.6);
-    gun.rotation = new BABYLON.Vector3(0.05, -1.75, 0.03);
-    gun.scaling = new BABYLON.Vector3(0.34, 0.34, 0.34);
 
-    gun.alwaysSelectAsActiveMesh = true;
-    gun.isPickable = false;
+    gun.rotation = new BABYLON.Vector3(
+      0.05,
+      -1.75,
+      0.03
+    );
+
+    gun.scaling = new BABYLON.Vector3(0.34, 0.34, 0.34);
 
     gun.getChildMeshes().forEach(mesh => {
       if (mesh.material) {
@@ -74,7 +77,6 @@ const createScene = () => {
   const enemy = BABYLON.MeshBuilder.CreateBox("enemy", {}, scene);
   enemy.position = new BABYLON.Vector3(0, 1, 10);
   enemy.checkCollisions = true;
-  enemy.isEnemy = true;
 
   // ===== 薬莢テンプレ =====
   let shellTemplate = BABYLON.MeshBuilder.CreateCylinder("shell", {
@@ -87,7 +89,7 @@ const createScene = () => {
 
   scene.shells = [];
 
-  // ===== 射撃 =====
+  // ===== 射撃（連射＋弱反動）=====
   let isShooting = false;
   let lastShot = 0;
   const fireRate = 100;
@@ -104,10 +106,10 @@ const createScene = () => {
 
   scene.onBeforeRenderObservable.add(() => {
 
-    // ===== 射撃処理 =====
+    // ===== 射撃 =====
     if (isShooting) {
       const now = Date.now();
-      if (now - lastShot > fireRate) {
+      if (now - lastShot >= fireRate) {
 
         lastShot = now;
 
@@ -120,19 +122,21 @@ const createScene = () => {
 
         const hit = scene.pickWithRay(ray);
 
-        // 敵ヒット
-        if (hit.pickedMesh && hit.pickedMesh.isEnemy) {
+        if (hit.pickedMesh && hit.pickedMesh.name === "enemy") {
           hit.pickedMesh.dispose();
           console.log("Enemy Down!");
         }
 
-        // 弾の線
         if (hit.pickedPoint) {
+          const points = [camera.position, hit.pickedPoint];
+
           const line = BABYLON.MeshBuilder.CreateLines("shot", {
-            points: [camera.position, hit.pickedPoint]
+            points: points
           }, scene);
 
-          setTimeout(() => line.dispose(), 30);
+          setTimeout(() => {
+            line.dispose();
+          }, 30);
         }
 
         // ===== 反動 =====
@@ -154,7 +158,8 @@ const createScene = () => {
           Math.random()
         );
 
-        shell.velocity = right.scale(0.2).add(new BABYLON.Vector3(0, 0.1, 0));
+        shell.velocity = right.scale(0.2)
+          .add(new BABYLON.Vector3(0, 0.1, 0));
 
         scene.shells.push(shell);
 
@@ -164,7 +169,7 @@ const createScene = () => {
       }
     }
 
-    // ===== 反動戻し =====
+    // ===== 反動戻り =====
     camera.rotation.x -= recoil;
     recoil *= 0.9;
 
@@ -193,18 +198,11 @@ engine.runRenderLoop(() => {
   scene.render();
 });
 
-// FPSモード
 canvas.addEventListener("click", () => {
   canvas.requestPointerLock();
-});
-
-// ジャンプ
-window.addEventListener("keydown", (e) => {
-  if (e.code === "Space") {
-    camera.cameraDirection.y = 0.2;
-  }
 });
 
 window.addEventListener("resize", () => {
   engine.resize();
 });
+</script>
