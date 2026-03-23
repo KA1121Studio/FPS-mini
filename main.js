@@ -44,6 +44,8 @@ const createScene = () => {
   });
 
   // ===== 銃 =====
+  let ejectPoint = null;
+
   BABYLON.SceneLoader.ImportMesh("", "models/", "gun.glb", scene, (meshes) => {
     const gun = meshes[0];
 
@@ -54,6 +56,13 @@ const createScene = () => {
 
     gun.alwaysSelectAsActiveMesh = true;
     gun.isPickable = false;
+
+    // ===== 排莢口ポイント =====
+    ejectPoint = new BABYLON.TransformNode("ejectPoint", scene);
+    ejectPoint.parent = gun;
+
+    // ★ここをデバッグで合わせる
+    ejectPoint.position = new BABYLON.Vector3(0.2, 0.1, 0);
   });
 
   // ===== 薬莢モデル =====
@@ -70,8 +79,7 @@ const createScene = () => {
   let debugMode = false;
   let debugShell = null;
 
-  let shellOffset = new BABYLON.Vector3(0.3, -0.2, 0);
-  let shellScale = 0.2;
+  let shellScale = 0.05;
   let shellRotation = new BABYLON.Vector3(0, 0, 0);
 
   // ===== 敵 =====
@@ -119,20 +127,18 @@ const createScene = () => {
 
         recoil += 0.02;
 
-        // ===== 薬莢生成 =====
-        if (shellTemplate) {
+        // ===== 薬莢生成（排莢口から） =====
+        if (shellTemplate && ejectPoint) {
+
           const shell = shellTemplate.clone("shell");
           shell.setEnabled(true);
 
-          const right = camera.getDirection(BABYLON.Axis.X);
-
-          shell.position = camera.position
-            .add(right.scale(shellOffset.x))
-            .add(new BABYLON.Vector3(0, shellOffset.y, shellOffset.z));
+          shell.position = ejectPoint.getAbsolutePosition();
 
           shell.scaling = new BABYLON.Vector3(shellScale, shellScale, shellScale);
-
           shell.rotation = shellRotation.clone();
+
+          const right = ejectPoint.getDirection(BABYLON.Axis.X);
 
           shell.velocity = right.scale(0.25)
             .add(new BABYLON.Vector3(0, 0.15, 0));
@@ -165,19 +171,10 @@ const createScene = () => {
     });
 
     // ===== デバッグ表示 =====
-    if (debugMode && debugShell && camera) {
+    if (debugMode && debugShell && ejectPoint) {
 
-      const forward = camera.getDirection(BABYLON.Axis.Z);
-      const right = camera.getDirection(BABYLON.Axis.X);
-      const up = camera.getDirection(BABYLON.Axis.Y);
-
-      debugShell.position = camera.position
-        .add(right.scale(shellOffset.x))
-        .add(up.scale(shellOffset.y))
-        .add(forward.scale(shellOffset.z));
-
+      debugShell.position = ejectPoint.getAbsolutePosition();
       debugShell.scaling = new BABYLON.Vector3(shellScale, shellScale, shellScale);
-
       debugShell.rotation = shellRotation;
     }
 
@@ -192,15 +189,8 @@ const createScene = () => {
       console.log("DEBUG:", debugMode ? "ON" : "OFF");
 
       if (debugMode && shellTemplate) {
-
-        // 初期位置を画面中央に
-        shellOffset = new BABYLON.Vector3(0, 0, 2);
-        shellScale = 0.2;
-        shellRotation = new BABYLON.Vector3(0, 0, 0);
-
         debugShell = shellTemplate.clone("debugShell");
         debugShell.setEnabled(true);
-
       } else {
         if (debugShell) {
           debugShell.dispose();
@@ -211,48 +201,38 @@ const createScene = () => {
 
     if (!debugMode) return;
 
-    const step = 0.05;
+    const scaleStep = e.shiftKey ? 0.01 : 0.05;
+    const rotStep = 0.1;
 
     switch (e.key) {
 
-      // ===== 位置 =====
-      case "ArrowRight": shellOffset.x += step; break;
-      case "ArrowLeft": shellOffset.x -= step; break;
-
-      case "ArrowUp": shellOffset.y += step; break;
-      case "ArrowDown": shellOffset.y -= step; break;
-
-      case "q": shellOffset.z += step; break;
-      case "e": shellOffset.z -= step; break;
-
       // ===== サイズ =====
       case "+":
-      case "=": shellScale += 0.05; break;
-      case "-": shellScale -= 0.05; break;
+      case "=": shellScale += scaleStep; break;
+      case "-": shellScale -= scaleStep; break;
 
       // ===== 回転 =====
-      case "u": shellRotation.x += 0.1; break;
-      case "j": shellRotation.x -= 0.1; break;
+      case "u": shellRotation.x += rotStep; break;
+      case "j": shellRotation.x -= rotStep; break;
 
-      case "i": shellRotation.y += 0.1; break;
-      case "k": shellRotation.y -= 0.1; break;
+      case "i": shellRotation.y += rotStep; break;
+      case "k": shellRotation.y -= rotStep; break;
 
-      case "o": shellRotation.z += 0.1; break;
-      case "l": shellRotation.z -= 0.1; break;
+      case "o": shellRotation.z += rotStep; break;
+      case "l": shellRotation.z -= rotStep; break;
 
       // コピー
       case "c":
         console.log("=== COPY ===");
-        console.log(`shellOffset = new BABYLON.Vector3(${shellOffset.x}, ${shellOffset.y}, ${shellOffset.z});`);
+        console.log(`ejectPoint.position = new BABYLON.Vector3(${ejectPoint.position.x}, ${ejectPoint.position.y}, ${ejectPoint.position.z});`);
         console.log(`shellScale = ${shellScale};`);
         console.log(`shellRotation = new BABYLON.Vector3(${shellRotation.x}, ${shellRotation.y}, ${shellRotation.z});`);
         break;
     }
 
-    console.log(
-      `位置: new BABYLON.Vector3(${shellOffset.x.toFixed(2)}, ${shellOffset.y.toFixed(2)}, ${shellOffset.z.toFixed(2)})`
-    );
-    console.log(`サイズ: ${shellScale.toFixed(2)}`);
+    if (shellScale < 0.01) shellScale = 0.01;
+
+    console.log(`サイズ: ${shellScale.toFixed(3)}`);
     console.log(
       `回転: new BABYLON.Vector3(${shellRotation.x.toFixed(2)}, ${shellRotation.y.toFixed(2)}, ${shellRotation.z.toFixed(2)})`
     );
