@@ -23,7 +23,6 @@ const createScene = () => {
   camera.speed = 0.4;
   camera.angularSensibility = 4000;
 
-  // 衝突
   scene.gravity = new BABYLON.Vector3(0, -0.5, 0);
   scene.collisionsEnabled = true;
 
@@ -41,9 +40,7 @@ const createScene = () => {
 
   // ===== マップ =====
   BABYLON.SceneLoader.ImportMesh("", "models/", "map.glb", scene, (meshes) => {
-    meshes.forEach(mesh => {
-      mesh.checkCollisions = true;
-    });
+    meshes.forEach(mesh => mesh.checkCollisions = true);
   });
 
   // ===== 銃 =====
@@ -51,7 +48,6 @@ const createScene = () => {
     const gun = meshes[0];
 
     gun.parent = camera;
-
     gun.position = new BABYLON.Vector3(0.4, -0.3, 1.6);
     gun.rotation = new BABYLON.Vector3(0.05, -1.75, 0.03);
     gun.scaling = new BABYLON.Vector3(0.34, 0.34, 0.34);
@@ -76,6 +72,7 @@ const createScene = () => {
 
   let shellOffset = new BABYLON.Vector3(0.3, -0.2, 0);
   let shellScale = 0.2;
+  let shellRotation = new BABYLON.Vector3(0, 0, 0);
 
   // ===== 敵 =====
   const enemy = BABYLON.MeshBuilder.CreateBox("enemy", {}, scene);
@@ -117,7 +114,6 @@ const createScene = () => {
           const line = BABYLON.MeshBuilder.CreateLines("shot", {
             points: [camera.position, hit.pickedPoint]
           }, scene);
-
           setTimeout(() => line.dispose(), 30);
         }
 
@@ -136,11 +132,7 @@ const createScene = () => {
 
           shell.scaling = new BABYLON.Vector3(shellScale, shellScale, shellScale);
 
-          shell.rotation = new BABYLON.Vector3(
-            Math.random() * Math.PI,
-            Math.random() * Math.PI,
-            Math.random() * Math.PI
-          );
+          shell.rotation = shellRotation.clone();
 
           shell.velocity = right.scale(0.25)
             .add(new BABYLON.Vector3(0, 0.15, 0));
@@ -174,13 +166,19 @@ const createScene = () => {
 
     // ===== デバッグ表示 =====
     if (debugMode && debugShell && camera) {
+
+      const forward = camera.getDirection(BABYLON.Axis.Z);
       const right = camera.getDirection(BABYLON.Axis.X);
+      const up = camera.getDirection(BABYLON.Axis.Y);
 
       debugShell.position = camera.position
         .add(right.scale(shellOffset.x))
-        .add(new BABYLON.Vector3(0, shellOffset.y, shellOffset.z));
+        .add(up.scale(shellOffset.y))
+        .add(forward.scale(shellOffset.z));
 
       debugShell.scaling = new BABYLON.Vector3(shellScale, shellScale, shellScale);
+
+      debugShell.rotation = shellRotation;
     }
 
   });
@@ -194,8 +192,15 @@ const createScene = () => {
       console.log("DEBUG:", debugMode ? "ON" : "OFF");
 
       if (debugMode && shellTemplate) {
+
+        // 初期位置を画面中央に
+        shellOffset = new BABYLON.Vector3(0, 0, 2);
+        shellScale = 0.2;
+        shellRotation = new BABYLON.Vector3(0, 0, 0);
+
         debugShell = shellTemplate.clone("debugShell");
         debugShell.setEnabled(true);
+
       } else {
         if (debugShell) {
           debugShell.dispose();
@@ -210,6 +215,7 @@ const createScene = () => {
 
     switch (e.key) {
 
+      // ===== 位置 =====
       case "ArrowRight": shellOffset.x += step; break;
       case "ArrowLeft": shellOffset.x -= step; break;
 
@@ -219,15 +225,27 @@ const createScene = () => {
       case "q": shellOffset.z += step; break;
       case "e": shellOffset.z -= step; break;
 
+      // ===== サイズ =====
       case "+":
       case "=": shellScale += 0.05; break;
-
       case "-": shellScale -= 0.05; break;
 
+      // ===== 回転 =====
+      case "u": shellRotation.x += 0.1; break;
+      case "j": shellRotation.x -= 0.1; break;
+
+      case "i": shellRotation.y += 0.1; break;
+      case "k": shellRotation.y -= 0.1; break;
+
+      case "o": shellRotation.z += 0.1; break;
+      case "l": shellRotation.z -= 0.1; break;
+
+      // コピー
       case "c":
         console.log("=== COPY ===");
         console.log(`shellOffset = new BABYLON.Vector3(${shellOffset.x}, ${shellOffset.y}, ${shellOffset.z});`);
         console.log(`shellScale = ${shellScale};`);
+        console.log(`shellRotation = new BABYLON.Vector3(${shellRotation.x}, ${shellRotation.y}, ${shellRotation.z});`);
         break;
     }
 
@@ -235,6 +253,9 @@ const createScene = () => {
       `位置: new BABYLON.Vector3(${shellOffset.x.toFixed(2)}, ${shellOffset.y.toFixed(2)}, ${shellOffset.z.toFixed(2)})`
     );
     console.log(`サイズ: ${shellScale.toFixed(2)}`);
+    console.log(
+      `回転: new BABYLON.Vector3(${shellRotation.x.toFixed(2)}, ${shellRotation.y.toFixed(2)}, ${shellRotation.z.toFixed(2)})`
+    );
   });
 
   return scene;
